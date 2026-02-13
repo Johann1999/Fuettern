@@ -11,11 +11,12 @@ input,select,button{padding:0.45rem;margin-top:0.3rem;width:100%;max-width:260px
 table{border-collapse:collapse;margin-top:1rem;width:100%}
 th,td{border:1px solid #ccc;padding:0.4rem;text-align:left}
 th{background:#f0f0f0}
+#timer{margin-top:1rem;font-size:1.2rem;font-weight:bold}
 </style>
 </head>
 <body>
 
-<h1>Fütterung erfassen1</h1>
+<h1>Fütterung erfassen</h1>
 
 <label>Ration auswählen</label>
 <select id="rationSelect"></select>
@@ -27,6 +28,8 @@ th{background:#f0f0f0}
 <input type="number" id="faktor" />
 
 <button onclick="speichern()">Fütterung dokumentieren</button>
+
+<div id="timer"></div>
 
 <h2>Zu fütternde Frischmasse (kg)</h2>
 <table>
@@ -48,6 +51,7 @@ const tsCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCT
 const fuetterCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=1853046882&single=true&output=csv";
 
 let rationen = {}, tsWerte = {}, letzte = {};
+let timerInterval = null;
 
 async function loadCSV(url){
   const resp = await fetch(url);
@@ -94,7 +98,6 @@ async function init(){
     }
   }
 
-  // Dropdown füllen
   populateSelect();
 }
 
@@ -109,7 +112,7 @@ function populateSelect(){
   });
   sel.selectedIndex = 0;
   sel.addEventListener("change", suggest);
-  suggest(); // direkt Vorschlag für erste Ration
+  suggest(); // Vorschläge für erste Ration
 }
 
 function suggest(){
@@ -118,9 +121,8 @@ function suggest(){
     document.getElementById("anzahl").value = letzte[r].anz;
     document.getElementById("faktor").value = letzte[r].fak;
   } else {
-    // Default-Werte, falls noch keine Fütterung dokumentiert
-    document.getElementById("anzahl").value = 1;
-    document.getElementById("faktor").value = 100;
+    document.getElementById("anzahl").value = '';
+    document.getElementById("faktor").value = '';
   }
   berechnen();
 }
@@ -146,6 +148,22 @@ function berechnen(){
 document.getElementById("anzahl").addEventListener("input", berechnen);
 document.getElementById("faktor").addEventListener("input", berechnen);
 
+function startTimer(seconds = 240){
+  clearInterval(timerInterval);
+  const timerDiv = document.getElementById("timer");
+  let remaining = seconds;
+  timerDiv.textContent = `Mischzeit: ${Math.floor(remaining/60)}:${(remaining%60).toString().padStart(2,'0')}`;
+  timerInterval = setInterval(()=>{
+    remaining--;
+    if(remaining<=0){
+      clearInterval(timerInterval);
+      timerDiv.textContent = "Mischzeit beendet!";
+      return;
+    }
+    timerDiv.textContent = `Mischzeit: ${Math.floor(remaining/60)}:${(remaining%60).toString().padStart(2,'0')}`;
+  },1000);
+}
+
 // Fütterung speichern
 function speichern(){
   const r = document.getElementById("rationSelect").value;
@@ -157,6 +175,7 @@ function speichern(){
   document.getElementById("formFaktor").value = fak;
   document.getElementById("fuetterForm").submit();
   alert("Dokumentiert!");
+  startTimer(240); // 4 Minuten starten
 }
 
 // Shortcut: Lauter-Taste dokumentiert Fütterung
