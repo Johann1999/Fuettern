@@ -19,7 +19,7 @@ th{background:#f0f0f0}
 
 <body>
 
-<h1>Fütterung erfassen T</h1>
+<h1>Fütterung erfassen</h1>
 
 <label>Ration auswählen</label>
 <select id="rationSelect"></select>
@@ -43,13 +43,19 @@ th{background:#f0f0f0}
 <tbody id="resultTable"></tbody>
 </table>
 
+<form id="fuetterForm" method="POST" action="https://docs.google.com/forms/d/e/FORM_ID/formResponse" target="hidden_iframe">
+  <input type="hidden" name="entry.111111" id="formRation">
+  <input type="hidden" name="entry.222222" id="formAnzahl">
+  <input type="hidden" name="entry.333333" id="formFaktor">
+</form>
+<iframe name="hidden_iframe" style="display:none;"></iframe>
+
 <script>
 
-// ===== HIER DEINE LINKS EINTRAGEN =====
+// ===== CSV LINKS =====
 const rationCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=0&single=true&output=csv";
 const tsCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=267748514&single=true&output=csv";
 const letzteCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=772016649&single=true&output=csv";
-const formURL = "https://docs.google.com/forms/d/e/1FAIpQLSe3xysbA5uxgEGDRy_lJAF2ZEDofJavgEXTlrz1POBcwMY3yw/formResponse?usp=dialog";
 
 let rationen = {};
 let tsWerte = {};
@@ -147,18 +153,18 @@ function berechnen(){
 }
 
 function speichern(){
- const r=document.getElementById("rationSelect").value;
- const anz=document.getElementById("anzahl").value;
- const fak=document.getElementById("faktor").value;
+ const r = document.getElementById("rationSelect").value;
+ const anz = document.getElementById("anzahl").value;
+ const fak = document.getElementById("faktor").value;
 
- const data=new FormData();
- data.append("entry.690290440", r);
- data.append("entry.1406564399", anz);
- data.append("entry.373869795", fak);
+ if(!r || !anz || !fak){ alert("Eingaben prüfen"); return; }
 
- fetch(formURL,{method:"POST",body:data})
- .then(()=>alert("Dokumentiert"))
- .catch(()=>alert("Fehler"));
+ document.getElementById("formRation").value = r;
+ document.getElementById("formAnzahl").value = anz;
+ document.getElementById("formFaktor").value = fak;
+
+ document.getElementById("fuetterForm").submit();
+ alert("Dokumentiert!");
 }
 
 init();
