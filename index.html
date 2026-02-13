@@ -1,53 +1,38 @@
-async function init(){
-  // 1. Rationen laden
-  const rtext = await loadCSV(rationCSV);
-  const rrows = parseCSV(rtext);
-  const headers = rrows[0].map(h=>h.trim());
-  for(let i=1;i<rrows.length;i++){
-    const name = rrows[i][0].trim();
-    if(!name) continue;
-    rationen[name]={};
-    for(let j=1;j<headers.length;j++){
-      const val=parseFloat(rrows[i][j]);
-      if(!isNaN(val) && val>0) rationen[name][headers[j]] = val;
-    }
-  }
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Fütterung erfassen</title>
+<style>
+body{font-family:Arial, sans-serif;margin:1rem}
+label{display:block;margin-top:0.6rem}
+input,select,button{padding:0.45rem;margin-top:0.3rem;width:100%;max-width:260px}
+table{border-collapse:collapse;margin-top:1rem;width:100%}
+th,td{border:1px solid #ccc;padding:0.4rem;text-align:left}
+th{background:#f0f0f0}
+</style>
+</head>
+<body>
 
-  // 2. TS-Werte laden
-  const ttext = await loadCSV(tsCSV);
-  const trows = parseCSV(ttext);
-  for(let i=1;i<trows.length;i++){
-    const comp = trows[i][1].trim();
-    const ts = parseFloat(trows[i][2]);
-    if(!isNaN(ts)) tsWerte[comp] = ts;
-  }
+<h1>Fütterung erfassen</h1>
 
-  // 3. Letzte Werte aus Fuetterungen
-  const fText = await loadCSV(fuetterCSV);
-  const fRows = parseCSV(fText);
-  for(let i=1;i<fRows.length;i++){
-    const ration = fRows[i][1].trim();
-    const anz = parseFloat(fRows[i][2]);
-    const fak = parseFloat(fRows[i][3]);
-    if(ration && !isNaN(anz) && !isNaN(fak)){
-      letzte[ration] = {anz,fak};
-    }
-  }
+<label>Ration auswählen</label>
+<select id="rationSelect"></select>
 
-  // 4. Dropdown füllen und Vorschlag laden
-  populateSelect();
-}
+<label>Anzahl Tiere</label>
+<input type="number" id="anzahl" />
 
-function populateSelect(){
-  const sel = document.getElementById("rationSelect");
-  sel.innerHTML="";
-  Object.keys(rationen).sort().forEach(r=>{
-    const opt = document.createElement("option");
-    opt.value = r;
-    opt.textContent = r;
-    sel.appendChild(opt);
-  });
-  sel.selectedIndex = 0;
-  sel.addEventListener("change", suggest);
-  suggest(); // nur aufrufen **nachdem Dropdown gefüllt ist**
-}
+<label>Korrekturfaktor (%)</label>
+<input type="number" id="faktor" />
+
+<button onclick="speichern()">Fütterung dokumentieren</button>
+
+<h2>Zu fütternde Frischmasse (kg)</h2>
+<table>
+<thead><tr><th>Komponente</th><th>kg</th></tr></thead>
+<tbody id="resultTable"></tbody>
+</table>
+
+<form id="fuetterForm" method="POST" action="https://docs.google.com/forms/d/e/1FAIpQLSe3xysbA5uxgEGDRy_lJAF2ZEDofJavgEXTlrz1POBcwMY3yw/formResponse" target="hidden_iframe">
+  <input type="hi
