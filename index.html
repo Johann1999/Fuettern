@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Fütterung erfassen</title>
+
+<style>
+body{font-family:Arial, sans-serif;margin:1rem}
+h1{margin-bottom:0.5rem}
+label{display:block;margin-top:0.6rem}
+input,select,button{padding:0.45rem;margin-top:0.3rem;width:100%;max-width:260px}
+table{border-collapse:collapse;margin-top:1rem;width:100%}
+th,td{border:1px solid #ccc;padding:0.4rem;text-align:left}
+th{background:#f0f0f0}
+.result{margin-top:1rem;font-weight:bold}
+</style>
+</head>
+
+<body>
+
+<h1>Fütterung erfassen</h1>
+
+<label>Ration auswählen</label>
+<select id="rationSelect"></select>
+
+<label>Anzahl Tiere</label>
+<input type="number" id="anzahl" />
+
+<label>Korrekturfaktor (%)</label>
+<input type="number" id="faktor" />
+
+<button onclick="berechnen()">Berechnen</button>
+<button onclick="speichern()">Fütterung dokumentieren</button>
+
+<div class="result" id="ergebnis"></div>
+
+<h2>Zu fütternde Frischmasse (kg)</h2>
+<table>
+<thead>
+<tr><th>Komponente</th><th>kg</th></tr>
+</thead>
+<tbody id="resultTable"></tbody>
+</table>
+
+<script>
+
+// ===== HIER DEINE LINKS EINTRAGEN =====
+const rationCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=0&single=true&output=csv";
+const tsCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=267748514&single=true&output=csv";
+const letzteCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=772016649&single=true&output=csv";
+const formURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=1853046882&single=true&output=csv";
+
+let rationen = {};
+let tsWerte = {};
+let letzte = {};
+
+async function loadCSV(url){
+ const resp = await fetch(url);
+ return await resp.text();
+}
+
+function parseCSV(text){
+ const rows=text.trim().split("\n").map(r=>r.split(","));
+ return rows;
+}
+
+async function init(){
+
+ // Rationen
+ const rtext=await loadCSV(rationCSV);
+ const rrows=parseCSV(rtext);
+ const headers=rrows[0];
+ for(let i=1;i<rrows.length;i++){
+   const name=rrows[i][0];
+   rationen[name]={};
+   for(let j=1;j<headers.length;j++){
+     const val=parseFloat(rrows[i][j]);
+     if(!isNaN(val) && val>0)
+       rationen[name][headers[j]]=val;
+   }
+ }
+
+ // TS
+ const ttext=await loadCSV(tsCSV);
+ const trows=parseCSV(ttext);
+ for(let i=1;i<trows.length;i++){
+   const comp=trows[i][1];
+   const ts=parseFloat(trows[i][2]);
+   if(!isNaN(ts)) tsWerte[comp]=ts;
+ }
+
+ // Letzte Werte
+ try{
+ const ltext=await loadCSV(letzteCSV);
+ const lrows=parseCSV(ltext);
+ for(let i=1;i<lrows.length;i++){
+   letzte[lrows[i][0]]={anz:lrows[i][1], fak:lrows[i][2]};
+ }
+ }catch{}
+
+ populateSelect();
+}
+
+function populateSelect(){
+ const sel=document.getElementById("rationSelect");
+ sel.innerHTML="";
+ for(let r in rationen){
+   const opt=document.createElement("option");
+   opt.value=r;
+   opt.textContent=r;
+   sel.appendChild(opt);
+ }
+ sel.onchange=suggest;
+ suggest();
+}
+
+function suggest(){
+ const r=document.getElementById("rationSelect").value;
+ if(letzte[r]){
+   document.getElementById("anzahl").value=letzte[r].anz;
+   document.getElementById("faktor").value=letzte[r].fak;
+ }
+}
+
+function berechnen(){
+ const r=document.getElementById("rationSelect").value;
+ const anz=parseFloat(document.getElementById("anzahl").value);
+ const fak=parseFloat(document.getElementById("faktor").value)/100;
+
+ if(!r||!anz||!fak){alert("Eingaben prüfen");return;}
+
+ const tbody=document.getElementById("resultTable");
+ tbody.innerHTML="";
+
+ for(let comp in rationen[r]){
+   const tm=rationen[r][comp];
+   const ts=tsWerte[comp]||100;
+   const fm=(tm/(ts/100))*anz*fak;
+
+   const tr=document.createElement("tr");
+   tr.innerHTML=`<td>${comp}</td><td>${fm.toFixed(2)}</td>`;
+   tbody.appendChild(tr);
+ }
+
+ document.getElementById("ergebnis").textContent="Berechnung abgeschlossen";
+}
+
+function speichern(){
+ const r=document.getElementById("rationSelect").value;
+ const anz=document.getElementById("anzahl").value;
+ const fak=document.getElementById("faktor").value;
+
+ const data=new FormData();
+ data.append("entry.690290440", r);
+ data.append("entry.1406564399", anz);
+ data.append("entry.373869795", fak);
+
+ fetch(formURL,{method:"POST",body:data})
+ .then(()=>alert("Dokumentiert"))
+ .catch(()=>alert("Fehler"));
+}
+
+init();
+</script>
+
+</body>
+</html>
