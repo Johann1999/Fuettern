@@ -19,7 +19,7 @@ th{background:#f0f0f0}
 
 <body>
 
-<h1>Fütterung erfassen T</h1>
+<h1>Fütterung erfassen 1</h1>
 
 <label>Ration auswählen</label>
 <select id="rationSelect"></select>
@@ -157,8 +157,7 @@ function speichern(){
  data.append("entry.373869795", fak);
 
  fetch(formURL,{method:"POST",body:data})
- .then(()=>alert("Dokumentiert"))
- .catch(()=>alert("Fehler"));
+ .then(()=>alert("Dokumentiert"));
 }
 
 init();
