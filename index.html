@@ -16,7 +16,7 @@ th{background:#f0f0f0}
 </head>
 <body>
 
-<h1>Fütterung erfassen</h1>
+<h1>Fütterung erfassen1</h1>
 
 <label>Ration auswählen</label>
 <select id="rationSelect"></select>
@@ -28,8 +28,6 @@ th{background:#f0f0f0}
 <input type="number" id="faktor" />
 
 <button onclick="speichern()">Fütterung dokumentieren</button>
-
-<div class="result" id="ergebnis"></div>
 
 <h2>Zu fütternde Frischmasse (kg)</h2>
 <table>
@@ -45,9 +43,10 @@ th{background:#f0f0f0}
 <iframe name="hidden_iframe" style="display:none;"></iframe>
 
 <script>
+// ===== CSV LINKS =====
 const rationCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=0&single=true&output=csv";
 const tsCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=267748514&single=true&output=csv";
-const letzteCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=772016649&single=true&output=csv";
+const fuetterCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=1853046882&single=true&output=csv";
 
 let rationen = {}, tsWerte = {}, letzte = {};
 
@@ -79,89 +78,4 @@ async function init(){
   // TS
   const ttext = await loadCSV(tsCSV);
   const trows = parseCSV(ttext);
-  for(let i=1;i<trows.length;i++){
-    const comp = trows[i][1];
-    const ts = parseFloat(trows[i][2]);
-    if(!isNaN(ts)) tsWerte[comp] = ts;
-  }
-
-  // Letzte Werte
-  try{
-    const ltext = await loadCSV(letzteCSV);
-    const lrows = parseCSV(ltext);
-    for(let i=1;i<lrows.length;i++){
-      const rationName = lrows[i][0];
-      const anz = parseFloat(lrows[i][1]);
-      const fak = parseFloat(lrows[i][2]);
-      if(!isNaN(anz) && !isNaN(fak)) letzte[rationName] = {anz,fak};
-    }
-  }catch{}
-
-  populateSelect();
-}
-
-function populateSelect(){
-  const sel = document.getElementById("rationSelect");
-  sel.innerHTML="";
-  for(let r in rationen){
-    const opt = document.createElement("option");
-    opt.value = r;
-    opt.textContent = r;
-    sel.appendChild(opt);
-  }
-  if(sel.options.length>0){
-    sel.selectedIndex=0;
-    suggest();
-  }
-  sel.addEventListener("change", suggest);
-}
-
-function suggest(){
-  const r = document.getElementById("rationSelect").value;
-  if(letzte[r]){
-    document.getElementById("anzahl").value = letzte[r].anz;
-    document.getElementById("faktor").value = letzte[r].fak;
-  } else {
-    document.getElementById("anzahl").value = '';
-    document.getElementById("faktor").value = '';
-  }
-  berechnen();
-}
-
-function berechnen(){
-  const r = document.getElementById("rationSelect").value;
-  const anz = parseFloat(document.getElementById("anzahl").value);
-  const fak = parseFloat(document.getElementById("faktor").value)/100;
-  if(!r || isNaN(anz) || isNaN(fak)) return;
-  const tbody = document.getElementById("resultTable");
-  tbody.innerHTML="";
-  for(let comp in rationen[r]){
-    const tm = rationen[r][comp];
-    const ts = tsWerte[comp]||100;
-    const fm = (tm/(ts/100))*anz*fak;
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${comp}</td><td>${fm.toFixed(2)}</td>`;
-    tbody.appendChild(tr);
-  }
-  document.getElementById("ergebnis").textContent="Berechnung abgeschlossen";
-}
-
-document.getElementById("anzahl").addEventListener("input", berechnen);
-document.getElementById("faktor").addEventListener("input", berechnen);
-
-function speichern(){
-  const r = document.getElementById("rationSelect").value;
-  const anz = document.getElementById("anzahl").value;
-  const fak = document.getElementById("faktor").value;
-  if(!r || !anz || !fak){alert("Eingaben prüfen");return;}
-  document.getElementById("formRation").value = r;
-  document.getElementById("formAnzahl").value = anz;
-  document.getElementById("formFaktor").value = fak;
-  document.getElementById("fuetterForm").submit();
-  alert("Dokumentiert!");
-}
-
-init();
-</script>
-</body>
-</html>
+  for(let i=1;i<tro
