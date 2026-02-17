@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fütterung dokumentieren v1.5</title>
+<title>Fütterung dokumentieren v1.6</title>
 
 <style>
 body{font-family:Arial;margin:1rem;font-size:20px}
@@ -15,26 +15,21 @@ input, select, button{font-size:22px;padding:.5rem;width:100%;max-width:150px}
 .stat{font-size:24px;margin-top:1rem}
 .red{color:red;font-weight:bold}
 .green{color:green;font-weight:bold}
+.black{color:black}
 #saveBtn{background-color:#4CAF50;color:white;border:none;cursor:pointer;margin-top:0.5rem}
 #saveBtn:hover{background-color:#45a049}
-.overview{display:flex;justify-content:space-between;margin-bottom:1rem;font-size:22px}
 </style>
 </head>
 <body>
 
-<h1>Fütterung dokumentieren v1.5</h1>
-
-<div class="overview">
- <div id="todayDate">Datum heute: </div>
- <div id="lastDate">Letzte Fütterung: </div>
-</div>
+<h1>Fütterung dokumentieren v1.6</h1>
 
 <table>
 <tr><td colspan="2">Ration auswählen</td></tr>
 <tr><td colspan="2"><select id="ration"></select></td></tr>
-<tr><td>Anzahl Tiere</td><td><input id="anz" type="number" style="max-width:100px"></td><td id="lastAnz">-</td></tr>
-<tr><td>Korrekturfaktor (%)</td><td><input id="fak" type="number" style="max-width:100px"></td><td id="lastFak">-</td></tr>
-<tr><td colspan="3"><button id="saveBtn" onclick="speichern()">Fütterung dokumentieren</button></td></tr>
+<tr><td>Anzahl Tiere</td><td><input id="anz" type="number" style="max-width:100px"></td></tr>
+<tr><td>Korrekturfaktor (%)</td><td><input id="fak" type="number" style="max-width:100px"></td></tr>
+<tr><td colspan="2"><button id="saveBtn" onclick="speichern()">Fütterung dokumentieren</button></td></tr>
 </table>
 
 <div class="alert" id="msg">Dokumentiert</div>
@@ -55,14 +50,13 @@ const ENTRY_R="entry.690290440";
 const ENTRY_A="entry.1406564399";
 const ENTRY_F="entry.373869795";
 
-let R={},TS={},ration=document.getElementById("ration"),anz=document.getElementById("anz"),fak=document.getElementById("fak"),tbl=document.getElementById("tbl"),msg=document.getElementById("msg"),timer=document.getElementById("timer"),stat=document.getElementById("stat"),lastAnz=document.getElementById("lastAnz"),lastFak=document.getElementById("lastFak"),todayDate=document.getElementById("todayDate"),lastDate=document.getElementById("lastDate");
+let R={},TS={},lastFaktor=null;
+
+let ration=document.getElementById("ration"),anz=document.getElementById("anz"),fak=document.getElementById("fak"),tbl=document.getElementById("tbl"),msg=document.getElementById("msg"),timer=document.getElementById("timer"),stat=document.getElementById("stat");
 
 async function csv(url){const t=await fetch(url);return(await t.text()).trim().split("\n").map(r=>r.split(","));}
 
 async function init(){
- const d=new Date();
- todayDate.textContent="Datum heute: "+d.toLocaleDateString();
-
  const r=await csv(rationCSV);
  const h=r[0];
  for(let i=1;i<r.length;i++){
@@ -76,7 +70,6 @@ async function init(){
  const t=await csv(tsCSV);
  for(let i=1;i<t.length;i++) TS[t[i][1]]=parseFloat(t[i][2]);
 
- // Dropdown füllen
  ration.innerHTML="";
  Object.keys(R).forEach(k=>{
    let o=document.createElement("option");
@@ -88,7 +81,6 @@ async function init(){
 
  ration.onchange=suggest;
  anz.oninput=fak.oninput=rechnen;
- 
  await suggest();
  setInterval(statistik,5000);
 }
@@ -96,20 +88,12 @@ async function init(){
 async function suggest(){
  const rows=await csv(feedCSV);
  let r=ration.value;
- let last=null;
+ lastFaktor=null;
  for(let i=rows.length-1;i>0;i--){
-   if(rows[i][1]===r){last=rows[i]; break;}
- }
- if(last){
-   lastAnz.textContent=last[2]+" Tiere";
-   lastFak.textContent=last[3];
-   lastDate.textContent="Letzte Fütterung: "+new Date(last[0]).toLocaleDateString();
-   if(!anz.value) anz.value=last[2];
-   if(!fak.value) fak.value=last[3];
- }else{
-   lastAnz.textContent="-";
-   lastFak.textContent="-";
-   lastDate.textContent="Letzte Fütterung: -";
+   if(rows[i][1]===r){
+     lastFaktor=parseFloat(rows[i][3]);
+     break;
+   }
  }
  rechnen();
 }
@@ -117,13 +101,19 @@ async function suggest(){
 function rechnen(){
  const r=ration.value;
  const a=parseFloat(anz.value);
- const f=parseFloat(fak.value)/100;
+ const f=parseFloat(fak.value);
  tbl.innerHTML="";
  if(!a||!f)return;
+ let fColor="black";
+ if(lastFaktor!==null){
+   if(f>lastFaktor) fColor="green";
+   else if(f<lastFaktor) fColor="red";
+ }
+ fak.style.color=fColor;
  for(let c in R[r]){
    let tm=R[r][c];
    let ts=TS[c]||100;
-   let fm=(tm/(ts/100))*a*f;
+   let fm=(tm/(ts/100))*a*(f/100);
    tbl.innerHTML+=`<tr><td>${c}</td><td>${fm.toFixed(1)}</td></tr>`;
  }
 }
