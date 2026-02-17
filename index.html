@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fütterung dokumentieren v1.7</title>
+<title>Fütterung dokumentieren v1.8</title>
 <style>
 body { font-family: Arial, sans-serif; margin: 1rem; font-size: 22px; background-color: #f9f9f9; color: #333; }
 h1 { font-size: 28px; margin-bottom: 1rem; text-align: center; color: #2c3e50; }
@@ -21,7 +21,7 @@ th { background-color: #ecf0f1; }
 </head>
 <body>
 
-<h1>Fütterung dokumentieren v1.7</h1>
+<h1>Fütterung dokumentieren v1.8</h1>
 
 <label for="ration">Ration auswählen</label>
 <select id="ration"></select>
@@ -52,7 +52,7 @@ const ENTRY_R = "entry.690290440";
 const ENTRY_A = "entry.1406564399";
 const ENTRY_F = "entry.373869795";
 
-let R = {}, TS = {}, lastFaktor = null;
+let R = {}, TS = {};
 let ration = document.getElementById("ration"), anz = document.getElementById("anz"), fak = document.getElementById("fak"), tbl = document.getElementById("tbl"), msg = document.getElementById("msg"), timer = document.getElementById("timer"), stat = document.getElementById("stat");
 
 async function csv(url) { const t = await fetch(url); return (await t.text()).trim().split("\n").map(r=>r.split(",")); }
@@ -80,9 +80,8 @@ async function init() {
   });
   if(ration.options.length>0) ration.selectedIndex=0;
 
-  ration.onchange = suggest;
-  // inputfelder nur zur berechnung, speichern bleibt manuell
-  anz.oninput = fak.oninput = rechnen;
+  ration.onchange = () => { berechnen(); suggest(); };
+  anz.oninput = fak.oninput = berechnen; // nur berechnen, nicht speichern
 
   await suggest();
   setInterval(statistik,5000);
@@ -91,19 +90,17 @@ async function init() {
 async function suggest() {
   const rows = await csv(feedCSV);
   let r = ration.value;
-  lastFaktor = null;
   for (let i=rows.length-1;i>0;i--){
     if(rows[i][1]===r){
-      lastFaktor = parseFloat(rows[i][3]);
       if(!anz.value) anz.value = rows[i][2];
-      if(!fak.value) fak.value = lastFaktor;
+      if(!fak.value) fak.value = rows[i][3];
       break;
     }
   }
-  rechnen();
+  berechnen();
 }
 
-function rechnen() {
+function berechnen() {
   const r = ration.value;
   const a = parseFloat(anz.value);
   const f = parseFloat(fak.value)/100;
@@ -130,6 +127,7 @@ async function speichern() {
   navigator.vibrate([200,100,200]);
   startTimer();
   statistik();
+  await suggest();
 }
 
 function startTimer() {
