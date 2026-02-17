@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fütterung dokumentieren v1.4</title>
+<title>Fütterung dokumentieren v1.5</title>
 
 <style>
 body{font-family:Arial;margin:1rem;font-size:20px}
 h1{font-size:28px}
 table, td, th{border:1px solid #ccc;border-collapse:collapse;padding:.5rem;font-size:22px}
-input, select, button{font-size:22px;padding:.5rem;width:100%;max-width:200px}
+input, select, button{font-size:22px;padding:.5rem;width:100%;max-width:150px}
 .alert{font-size:26px;color:green;opacity:0;transition:opacity .3s;margin-top:.5rem}
 .timer{font-size:34px;font-weight:bold;margin-top:1rem}
 .stat{font-size:24px;margin-top:1rem}
@@ -22,7 +22,7 @@ input, select, button{font-size:22px;padding:.5rem;width:100%;max-width:200px}
 </head>
 <body>
 
-<h1>Fütterung dokumentieren v1.4</h1>
+<h1>Fütterung dokumentieren v1.5</h1>
 
 <div class="overview">
  <div id="todayDate">Datum heute: </div>
@@ -30,9 +30,10 @@ input, select, button{font-size:22px;padding:.5rem;width:100%;max-width:200px}
 </div>
 
 <table>
-<tr><td>Ration auswählen</td><td><select id="ration"></select></td></tr>
-<tr><td>Anzahl Tiere</td><td><input id="anz" type="number"></td><td id="lastAnz">-</td></tr>
-<tr><td>Korrekturfaktor (%)</td><td><input id="fak" type="number"></td><td id="lastFak">-</td></tr>
+<tr><td colspan="2">Ration auswählen</td></tr>
+<tr><td colspan="2"><select id="ration"></select></td></tr>
+<tr><td>Anzahl Tiere</td><td><input id="anz" type="number" style="max-width:100px"></td><td id="lastAnz">-</td></tr>
+<tr><td>Korrekturfaktor (%)</td><td><input id="fak" type="number" style="max-width:100px"></td><td id="lastFak">-</td></tr>
 <tr><td colspan="3"><button id="saveBtn" onclick="speichern()">Fütterung dokumentieren</button></td></tr>
 </table>
 
@@ -93,7 +94,6 @@ async function init(){
 }
 
 async function suggest(){
- // letzte Werte aus feedCSV
  const rows=await csv(feedCSV);
  let r=ration.value;
  let last=null;
