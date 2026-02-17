@@ -3,31 +3,39 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fütterung dokumentieren v1.3</title>
+<title>Fütterung dokumentieren v1.4</title>
 
 <style>
 body{font-family:Arial;margin:1rem;font-size:20px}
 h1{font-size:28px}
-select,input,button{font-size:22px;padding:.5rem;width:100%;max-width:320px;margin-top:.5rem}
-table{margin-top:1rem;width:100%;border-collapse:collapse;font-size:22px}
-th,td{border:1px solid #ccc;padding:.5rem}
-.alert{font-size:26px;color:green;opacity:0;transition:opacity .3s}
+table, td, th{border:1px solid #ccc;border-collapse:collapse;padding:.5rem;font-size:22px}
+input, select, button{font-size:22px;padding:.5rem;width:100%;max-width:200px}
+.alert{font-size:26px;color:green;opacity:0;transition:opacity .3s;margin-top:.5rem}
 .timer{font-size:34px;font-weight:bold;margin-top:1rem}
 .stat{font-size:24px;margin-top:1rem}
 .red{color:red;font-weight:bold}
 .green{color:green;font-weight:bold}
-button#saveBtn{background-color:#4CAF50;color:white;border:none;cursor:pointer;margin-top:0.5rem}
-button#saveBtn:hover{background-color:#45a049}
+#saveBtn{background-color:#4CAF50;color:white;border:none;cursor:pointer;margin-top:0.5rem}
+#saveBtn:hover{background-color:#45a049}
+.overview{display:flex;justify-content:space-between;margin-bottom:1rem;font-size:22px}
 </style>
 </head>
 <body>
 
-<h1>Fütterung dokumentieren v1.3</h1>
+<h1>Fütterung dokumentieren v1.4</h1>
 
-<select id="ration"></select>
-<input id="anz" type="number" placeholder="Anzahl Tiere">
-<input id="fak" type="number" placeholder="Faktor %">
-<button id="saveBtn" onclick="speichern()">Fütterung dokumentieren</button>
+<div class="overview">
+ <div id="todayDate">Datum heute: </div>
+ <div id="lastDate">Letzte Fütterung: </div>
+</div>
+
+<table>
+<tr><td>Ration auswählen</td><td><select id="ration"></select></td></tr>
+<tr><td>Anzahl Tiere</td><td><input id="anz" type="number"></td><td id="lastAnz">-</td></tr>
+<tr><td>Korrekturfaktor (%)</td><td><input id="fak" type="number"></td><td id="lastFak">-</td></tr>
+<tr><td colspan="3"><button id="saveBtn" onclick="speichern()">Fütterung dokumentieren</button></td></tr>
+</table>
+
 <div class="alert" id="msg">Dokumentiert</div>
 <div class="timer" id="timer"></div>
 <div class="stat" id="stat"></div>
@@ -46,98 +54,6 @@ const ENTRY_R="entry.690290440";
 const ENTRY_A="entry.1406564399";
 const ENTRY_F="entry.373869795";
 
-let R={},TS={},ration=document.getElementById("ration"),anz=document.getElementById("anz"),fak=document.getElementById("fak"),tbl=document.getElementById("tbl"),msg=document.getElementById("msg"),timer=document.getElementById("timer"),stat=document.getElementById("stat");
+let R={},TS={},ration=document.getElementById("ration"),anz=document.getElementById("anz"),fak=document.getElementById("fak"),tbl=document.getElementById("tbl"),msg=document.getElementById("msg"),timer=document.getElementById("timer"),stat=document.getElementById("stat"),lastAnz=document.getElementById("lastAnz"),lastFak=document.getElementById("lastFak"),todayDate=document.getElementById("todayDate"),lastDate=document.getElementById("lastDate");
 
-async function csv(url){const t=await fetch(url);return(await t.text()).trim().split("\n").map(r=>r.split(","));}
-
-async function init(){
- const r=await csv(rationCSV);
- const h=r[0];
- for(let i=1;i<r.length;i++){
-   let name=r[i][0];
-   R[name]={};
-   for(let j=1;j<h.length;j++){
-     let v=parseFloat(r[i][j]);
-     if(v>0) R[name][h[j]]=v;
-   }
- }
- const t=await csv(tsCSV);
- for(let i=1;i<t.length;i++) TS[t[i][1]]=parseFloat(t[i][2]);
-
- // Dropdown füllen
- ration.innerHTML="";
- Object.keys(R).forEach(k=>{
-   let o=document.createElement("option");
-   o.textContent=k;
-   o.value=k;
-   ration.appendChild(o);
- });
- if(ration.options.length>0) ration.selectedIndex=0;
-
- rechnen();
- statistik();
- ration.onchange=rechnen;
- anz.oninput=fak.oninput=rechnen;
- setInterval(statistik,5000);
-}
-
-function rechnen(){
- const r=ration.value;
- const a=parseFloat(anz.value);
- const f=parseFloat(fak.value)/100;
- tbl.innerHTML="";
- if(!a||!f)return;
- for(let c in R[r]){
-   let tm=R[r][c];
-   let ts=TS[c]||100;
-   let fm=(tm/(ts/100))*a*f;
-   tbl.innerHTML+=`<tr><td>${c}</td><td>${fm.toFixed(1)}</td></tr>`;
- }
-}
-
-async function speichern(){
- let fd=new FormData();
- fd.append(ENTRY_R,ration.value);
- fd.append(ENTRY_A,anz.value);
- fd.append(ENTRY_F,fak.value);
- await fetch(formURL,{method:"POST",mode:"no-cors",body:fd});
- msg.style.opacity=1;
- setTimeout(()=>msg.style.opacity=0,1000);
- navigator.vibrate([200,100,200]);
- startTimer();
- statistik();
-}
-
-function startTimer(){
- let t=240;
- timer.textContent="Mischzeit: 4:00";
- let i=setInterval(()=>{
-   t--;
-   let m=Math.floor(t/60);
-   let s=(t%60).toString().padStart(2,"0");
-   timer.textContent=`Mischzeit: ${m}:${s}`;
-   if(t<=0){clearInterval(i);navigator.vibrate([500,200,500]);timer.textContent="FERTIG";}
- },1000);
-}
-
-async function statistik(){
- const rows=await csv(feedCSV);
- let today=0,yest=0;
- let d=new Date();
- let t0=d.toISOString().slice(0,10);
- d.setDate(d.getDate()-1);
- let y0=d.toISOString().slice(0,10);
- for(let i=1;i<rows.length;i++){
-   let ts=rows[i][0];
-   if(!ts) continue;
-   if(ts.startsWith(t0)) today++;
-   if(ts.startsWith(y0)) yest++;
- }
- stat.innerHTML=`Heute: <span class="${today==yest?'green':'red'}">${today}</span> | Gestern: ${yest}`;
-}
-
-document.body.addEventListener("dblclick",speichern);
-init();
-</script>
-</body>
-</html>
+async function csv(url){const t=await fetch(url);return(await t.t
