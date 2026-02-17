@@ -1,269 +1,167 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fütterung erfassen</title>
+<title>Fütterung dokumentieren v1.5</title>
 <style>
-body{font-family:Arial, sans-serif;margin:1rem}
-@@ -15,20 +15,22 @@
-#message{margin-top:0.5rem;color:green;font-weight:bold}
-#uebersicht{margin-top:1rem;font-weight:bold}
-.red{color:red;}
-@keyframes blink { 50% { background-color: yellow; } }
-.blink { animation: blink 1s step-start infinite; }
+body{font-family:Arial;margin:1rem;font-size:20px}
+h1{font-size:28px}
+input, select, button{font-size:22px;padding:.5rem;width:100%;max-width:150px}
+.alert{font-size:26px;color:green;opacity:0;transition:opacity .3s;margin-top:.5rem}
+.timer{font-size:34px;font-weight:bold;margin-top:1rem}
+.stat{font-size:24px;margin-top:1rem}
+#saveBtn{background-color:#4CAF50;color:white;border:none;cursor:pointer;margin-top:0.5rem}
+#saveBtn:hover{background-color:#45a049}
+table, td, th{border:1px solid #ccc;border-collapse:collapse;padding:.5rem;font-size:22px}
 </style>
 </head>
 <body>
 
-<h1>Fütterung erfassen1</h1>
-<h1>Fütterung erfassen</h1>
+<h1>Fütterung dokumentieren v1.5</h1>
 
 <label>Ration auswählen</label>
-<select id="rationSelect"></select>
+<select id="ration"></select>
 
 <label>Anzahl Tiere</label>
-<input type="number" id="anzahl" />
-<input type="number" id="anzahl">
+<input id="anz" type="number">
 
 <label>Korrekturfaktor (%)</label>
-<input type="number" id="faktor" />
-<input type="number" id="faktor">
+<input id="fak" type="number">
 
-<button onclick="speichern()">Fütterung dokumentieren</button>
+<button id="saveBtn" onclick="speichern()">Fütterung dokumentieren</button>
 
-@@ -62,6 +64,7 @@ <h2>Zu fütternde Frischmasse (kg)</h2>
-let rationen = {}, tsWerte = {}, letzte = {};
-let timerInterval = null;
+<div class="alert" id="msg">Dokumentiert</div>
+<div class="timer" id="timer"></div>
+<div class="stat" id="stat"></div>
 
-// --- CSV Laden ---
-async function loadCSV(url){
-const resp = await fetch(url);
-return await resp.text();
-@@ -71,18 +74,19 @@ <h2>Zu fütternde Frischmasse (kg)</h2>
-return text.trim().split("\n").map(r=>r.split(",").map(c=>c.trim()));
-}
+<table>
+<thead><tr><th>Komponente</th><th>kg</th></tr></thead>
+<tbody id="tbl"></tbody>
+</table>
 
-// --- Init ---
+<script>
+const rationCSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=0&single=true&output=csv";
+const tsCSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=267748514&single=true&output=csv";
+const feedCSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=1853046882&single=true&output=csv";
+const formURL="https://docs.google.com/forms/d/e/1FAIpQLSe3xysbA5uxgEGDRy_lJAF2ZEDofJavgEXTlrz1POBcwMY3yw/formResponse";
+const ENTRY_R="entry.690290440";
+const ENTRY_A="entry.1406564399";
+const ENTRY_F="entry.373869795";
+
+let R={},TS={},lastFaktor=null;
+
+let ration=document.getElementById("ration"),anz=document.getElementById("anz"),fak=document.getElementById("fak"),tbl=document.getElementById("tbl"),msg=document.getElementById("msg"),timer=document.getElementById("timer"),stat=document.getElementById("stat");
+
+async function csv(url){const t=await fetch(url);return(await t.text()).trim().split("\n").map(r=>r.split(","));}
+
 async function init(){
-// Rationen
-const rText = await loadCSV(rationCSV);
-const rRows = parseCSV(rText);
-  const headers = rRows[0].map(h => h.trim());
-  const headers = rRows[0].map(h=>h.trim());
-for(let i=1;i<rRows.length;i++){
-const name = rRows[i][0].trim();
-if(!name) continue;
-    rationen[name] = {};
-    rationen[name]={};
-for(let j=1;j<headers.length;j++){
-const val = parseFloat(rRows[i][j]);
-      if(!isNaN(val) && val>0) rationen[name][headers[j]] = val;
-      if(!isNaN(val) && val>0) rationen[name][headers[j]]=val;
-}
-}
+ const r=await csv(rationCSV);
+ const h=r[0];
+ for(let i=1;i<r.length;i++){
+   let name=r[i][0];
+   R[name]={};
+   for(let j=1;j<h.length;j++){
+     let v=parseFloat(r[i][j]);
+     if(v>0) R[name][h[j]]=v;
+   }
+ }
+ const t=await csv(tsCSV);
+ for(let i=1;i<t.length;i++) TS[t[i][1]]=parseFloat(t[i][2]);
 
-@@ -92,53 +96,33 @@ <h2>Zu fütternde Frischmasse (kg)</h2>
-for(let i=1;i<tRows.length;i++){
-const comp = tRows[i][1].trim();
-const ts = parseFloat(tRows[i][2]);
-    if(!isNaN(ts)) tsWerte[comp] = ts;
-    if(!isNaN(ts)) tsWerte[comp]=ts;
-}
+ ration.innerHTML="";
+ Object.keys(R).forEach(k=>{
+   let o=document.createElement("option");
+   o.textContent=k;
+   o.value=k;
+   ration.appendChild(o);
+ });
+ if(ration.options.length>0) ration.selectedIndex=0;
 
-  // Letzte Werte & Übersicht
-  const fText = await loadCSV(fuetterCSV);
-  const fRows = parseCSV(fText);
-  const today = new Date().toISOString().slice(0,10); // YYYY-MM-DD
-  const yesterday = new Date(Date.now()-86400000).toISOString().slice(0,10);
-  let todayCount = 0, yesterdayCount = 0;
-  for(let i=1;i<fRows.length;i++){
-    const ration = fRows[i][1].trim();
-    const date = fRows[i][0].trim().slice(0,10);
-    const anz = parseFloat(fRows[i][2]);
-    const fak = parseFloat(fRows[i][3]);
-    if(ration && !isNaN(anz) && !isNaN(fak)){
-      letzte[ration] = {anz,fak};
-      if(date === today) todayCount++;
-      if(date === yesterday) yesterdayCount++;
-    }
-  }
-  document.getElementById("todayCount").textContent = todayCount;
-  document.getElementById("yesterdayCount").textContent = yesterdayCount;
-  if(todayCount !== yesterdayCount){
-    document.getElementById("uebersicht").classList.add("red");
-  } else {
-    document.getElementById("uebersicht").classList.remove("red");
-  }
-  // Letzte Werte + Übersicht
-  await updateUebersicht();
+ ration.onchange=suggest;
+ anz.oninput=fak.oninput=rechnen;
 
-populateSelect();
+ await suggest();
+ setInterval(statistik,5000);
 }
 
-// --- Dropdown ---
-function populateSelect(){
-const sel = document.getElementById("rationSelect");
-  sel.innerHTML = "";
-  Object.keys(rationen).sort().forEach(r => {
-    const opt = document.createElement("option");
-    opt.value = r;
-    opt.textContent = r;
-  sel.innerHTML="";
-  Object.keys(rationen).sort().forEach(r=>{
-    const opt=document.createElement("option");
-    opt.value=r;
-    opt.textContent=r;
-sel.appendChild(opt);
-});
-  sel.selectedIndex = 0;
-  sel.selectedIndex=0;
-sel.addEventListener("change", suggest);
-suggest();
+async function suggest(){
+ const rows=await csv(feedCSV);
+ let r=ration.value;
+ lastFaktor=null;
+ for(let i=rows.length-1;i>0;i--){
+   if(rows[i][1]===r){
+     lastFaktor=parseFloat(rows[i][3]);
+     break;
+   }
+ }
+ if(lastFaktor!==null){
+   if(!anz.value) anz.value=rows[rows.length-1][2];
+   if(!fak.value) fak.value=lastFaktor;
+ }
+ rechnen();
 }
 
-// --- Vorschläge ---
-function suggest(){
-  const r = document.getElementById("rationSelect").value.trim();
-  const r=document.getElementById("rationSelect").value.trim();
-if(letzte[r]){
-document.getElementById("anzahl").value = letzte[r].anz;
-document.getElementById("faktor").value = letzte[r].fak;
-@@ -149,64 +133,102 @@ <h2>Zu fütternde Frischmasse (kg)</h2>
-berechnen();
+function rechnen(){
+ const r=ration.value;
+ const a=parseFloat(anz.value);
+ const f=parseFloat(fak.value)/100;
+ tbl.innerHTML="";
+ if(!a||!f) return;
+ for(let c in R[r]){
+   let tm=R[r][c];
+   let ts=TS[c]||100;
+   let fm=(tm/(ts/100))*a*f;
+   const tr=document.createElement("tr");
+   tr.innerHTML=`<td>${c}</td><td>${fm.toFixed(2)}</td>`;
+   tbl.appendChild(tr);
+ }
 }
 
-// --- Berechnen ---
-function berechnen(){
-  const r = document.getElementById("rationSelect").value;
-  const anz = parseFloat(document.getElementById("anzahl").value);
-  const fak = parseFloat(document.getElementById("faktor").value)/100;
-  if(!r || isNaN(anz) || isNaN(fak)) return;
-  const tbody = document.getElementById("resultTable");
-  tbody.innerHTML = "";
-  const r=document.getElementById("rationSelect").value;
-  const anz=parseFloat(document.getElementById("anzahl").value);
-  const fak=parseFloat(document.getElementById("faktor").value)/100;
-  if(!r||isNaN(anz)||isNaN(fak)) return;
-  const tbody=document.getElementById("resultTable");
-  tbody.innerHTML="";
-for(let comp in rationen[r]){
-    const tm = rationen[r][comp];
-    const ts = tsWerte[comp] || 100;
-    const fm = (tm/(ts/100)) * anz * fak;
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${comp}</td><td>${fm.toFixed(2)}</td>`;
-    const tm=rationen[r][comp];
-    const ts=tsWerte[comp]||100;
-    const fm=(tm/(ts/100))*anz*fak;
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${comp}</td><td>${fm.toFixed(2)}</td>`;
-tbody.appendChild(tr);
-}
+async function speichern(){
+ let fd=new FormData();
+ fd.append(ENTRY_R,ration.value);
+ fd.append(ENTRY_A,anz.value);
+ fd.append(ENTRY_F,fak.value);
+ await fetch(formURL,{method:"POST",mode:"no-cors",body:fd});
+ msg.style.opacity=1;
+ setTimeout(()=>msg.style.opacity=0,1000);
+ navigator.vibrate([200,100,200]);
+ startTimer();
+ statistik();
+ await suggest();
 }
 
-document.getElementById("anzahl").addEventListener("input", berechnen);
-document.getElementById("faktor").addEventListener("input", berechnen);
-
-function startTimer(seconds = 240){
-// --- Timer ---
-function startTimer(seconds=240){
-clearInterval(timerInterval);
-  const timerDiv = document.getElementById("timer");
-  let remaining = seconds;
-  timerDiv.textContent = `Mischzeit: ${Math.floor(remaining/60)}:${(remaining%60).toString().padStart(2,'0')}`;
-  timerInterval = setInterval(()=>{
-  const timerDiv=document.getElementById("timer");
-  let remaining=seconds;
-  timerDiv.textContent=`Mischzeit: ${Math.floor(remaining/60)}:${(remaining%60).toString().padStart(2,'0')}`;
-  timerInterval=setInterval(()=>{
-remaining--;
-if(remaining<=0){
-clearInterval(timerInterval);
-      timerDiv.textContent = "Mischzeit beendet!";
-      timerDiv.textContent="Mischzeit beendet!";
-      // Alarm: Hintergrund blinkt + Vibration
-      timerDiv.classList.add("blink");
-      if(navigator.vibrate){
-        navigator.vibrate([500,200,500]);
-      }
-return;
-}
-    timerDiv.textContent = `Mischzeit: ${Math.floor(remaining/60)}:${(remaining%60).toString().padStart(2,'0')}`;
-    timerDiv.textContent=`Mischzeit: ${Math.floor(remaining/60)}:${(remaining%60).toString().padStart(2,'0')}`;
-},1000);
+function startTimer(){
+ let t=240;
+ timer.textContent="Mischzeit: 4:00";
+ let i=setInterval(()=>{
+   t--;
+   let m=Math.floor(t/60);
+   let s=(t%60).toString().padStart(2,"0");
+   timer.textContent=`Mischzeit: ${m}:${s}`;
+   if(t<=0){clearInterval(i);navigator.vibrate([500,200,500]);timer.textContent="FERTIG";}
+ },1000);
 }
 
-// Fütterung speichern
-// --- Übersicht aktualisieren ---
-async function updateUebersicht(){
-  const fText=await loadCSV(fuetterCSV);
-  const fRows=parseCSV(fText);
-  const today=new Date().toISOString().slice(0,10);
-  const yesterday=new Date(Date.now()-86400000).toISOString().slice(0,10);
-  let todayCount=0, yesterdayCount=0;
-  letzte={};
-  for(let i=1;i<fRows.length;i++){
-    const ration=fRows[i][1].trim();
-    const date=fRows[i][0].trim().slice(0,10);
-    const anz=parseFloat(fRows[i][2]);
-    const fak=parseFloat(fRows[i][3]);
-    if(ration && !isNaN(anz) && !isNaN(fak)){
-      letzte[ration]={anz,fak};
-      if(date===today) todayCount++;
-      if(date===yesterday) yesterdayCount++;
-    }
-  }
-  document.getElementById("todayCount").textContent=todayCount;
-  document.getElementById("yesterdayCount").textContent=yesterdayCount;
-  const ueb=document.getElementById("uebersicht");
-  if(todayCount!==yesterdayCount){
-    ueb.classList.add("red");
-  } else { ueb.classList.remove("red"); }
+async function statistik(){
+ const rows=await csv(feedCSV);
+ let today=0,yest=0;
+ let d=new Date();
+ let t0=d.toISOString().slice(0,10);
+ d.setDate(d.getDate()-1);
+ let y0=d.toISOString().slice(0,10);
+ for(let i=1;i<rows.length;i++){
+   let ts=rows[i][0];
+   if(!ts) continue;
+   if(ts.startsWith(t0)) today++;
+   if(ts.startsWith(y0)) yest++;
+ }
+ stat.innerHTML=`Heute: ${today} | Gestern: ${yest}`;
 }
 
-// --- Speichern ---
-function speichern(){
-  const r = document.getElementById("rationSelect").value;
-  const anz = document.getElementById("anzahl").value;
-  const fak = document.getElementById("faktor").value;
-  if(!r || !anz || !fak){alert("Eingaben prüfen"); return;}
-  document.getElementById("formRation").value = r;
-  document.getElementById("formAnzahl").value = anz;
-  document.getElementById("formFaktor").value = fak;
-  const r=document.getElementById("rationSelect").value;
-  const anz=document.getElementById("anzahl").value;
-  const fak=document.getElementById("faktor").value;
-  if(!r||!anz||!fak){alert("Eingaben prüfen"); return;}
-  document.getElementById("formRation").value=r;
-  document.getElementById("formAnzahl").value=anz;
-  document.getElementById("formFaktor").value=fak;
-document.getElementById("fuetterForm").submit();
-
-  // Meldung anzeigen und automatisch nach 1 Sekunde verschwinden lassen
-  const msgDiv = document.getElementById("message");
-  msgDiv.textContent = "Dokumentiert!";
-  setTimeout(()=>{ msgDiv.textContent = ""; },1000);
-  // Meldung automatisch nach 1 Sekunde ausblenden
-  const msgDiv=document.getElementById("message");
-  msgDiv.textContent="Dokumentiert!";
-  setTimeout(()=>{msgDiv.textContent="";},1000);
-
-  // Timer starten
-startTimer(240);
-
-  // Übersicht aktualisieren
-  updateUebersicht();
-}
-
-// Lauter-Taste Shortcut
-window.addEventListener('keydown', function(e){
-  if(e.key === "AudioVolumeUp" || e.keyCode === 175){
-// --- Lauter-Taste Shortcut ---
-window.addEventListener('keydown',function(e){
-  if(e.key==="AudioVolumeUp"||e.keyCode===175){
-e.preventDefault();
-speichern();
-}
+document.body.addEventListener("dblclick",speichern);
+init();
+</script>
+</body>
+</html>
