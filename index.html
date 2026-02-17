@@ -3,13 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fütterung dokumentieren v1.6</title>
-
+<title>Fütterung dokumentieren v1.7</title>
 <style>
-body{font-family:Arial;margin:1rem;font-size:20px}
-h1{font-size:28px}
-table, td, th{border:1px solid #ccc;border-collapse:collapse;padding:.5rem;font-size:22px}
-input, select, button{font-size:22px;padding:.5rem;width:100%;max-width:150px}
+body{font-family:Arial;margin:1rem;font-size:22px}
+h1{font-size:28px;margin-bottom:1rem}
+input, select, button{font-size:22px;padding:.5rem;width:100%;max-width:200px;margin-bottom:1rem}
 .alert{font-size:26px;color:green;opacity:0;transition:opacity .3s;margin-top:.5rem}
 .timer{font-size:34px;font-weight:bold;margin-top:1rem}
 .stat{font-size:24px;margin-top:1rem}
@@ -18,28 +16,29 @@ input, select, button{font-size:22px;padding:.5rem;width:100%;max-width:150px}
 .black{color:black}
 #saveBtn{background-color:#4CAF50;color:white;border:none;cursor:pointer;margin-top:0.5rem}
 #saveBtn:hover{background-color:#45a049}
+.result-row{margin-bottom:0.5rem}
 </style>
 </head>
 <body>
 
-<h1>Fütterung dokumentieren v1.6</h1>
+<h1>Fütterung dokumentieren v1.7</h1>
 
-<table>
-<tr><td colspan="2">Ration auswählen</td></tr>
-<tr><td colspan="2"><select id="ration"></select></td></tr>
-<tr><td>Anzahl Tiere</td><td><input id="anz" type="number" style="max-width:100px"></td></tr>
-<tr><td>Korrekturfaktor (%)</td><td><input id="fak" type="number" style="max-width:100px"></td></tr>
-<tr><td colspan="2"><button id="saveBtn" onclick="speichern()">Fütterung dokumentieren</button></td></tr>
-</table>
+<label>Ration auswählen</label>
+<select id="ration"></select>
+
+<label>Anzahl Tiere</label>
+<input id="anz" type="number">
+
+<label>Korrekturfaktor (%)</label>
+<input id="fak" type="number">
+
+<button id="saveBtn" onclick="speichern()">Fütterung dokumentieren</button>
 
 <div class="alert" id="msg">Dokumentiert</div>
 <div class="timer" id="timer"></div>
 <div class="stat" id="stat"></div>
 
-<table>
-<thead><tr><th>Komponente</th><th>kg</th></tr></thead>
-<tbody id="tbl"></tbody>
-</table>
+<div id="tbl"></div>
 
 <script>
 const rationCSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=0&single=true&output=csv";
@@ -51,7 +50,6 @@ const ENTRY_A="entry.1406564399";
 const ENTRY_F="entry.373869795";
 
 let R={},TS={},lastFaktor=null;
-
 let ration=document.getElementById("ration"),anz=document.getElementById("anz"),fak=document.getElementById("fak"),tbl=document.getElementById("tbl"),msg=document.getElementById("msg"),timer=document.getElementById("timer"),stat=document.getElementById("stat");
 
 async function csv(url){const t=await fetch(url);return(await t.text()).trim().split("\n").map(r=>r.split(","));}
@@ -114,7 +112,7 @@ function rechnen(){
    let tm=R[r][c];
    let ts=TS[c]||100;
    let fm=(tm/(ts/100))*a*(f/100);
-   tbl.innerHTML+=`<tr><td>${c}</td><td>${fm.toFixed(1)}</td></tr>`;
+   tbl.innerHTML+=`<div class="result-row">${c}: ${Math.round(fm)}</div>`;
  }
 }
 
