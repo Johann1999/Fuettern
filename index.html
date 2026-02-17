@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fütterung dokumentieren v1.6</title>
+<title>Fütterung dokumentieren v1.7</title>
 <style>
 body { font-family: Arial, sans-serif; margin: 1rem; font-size: 22px; background-color: #f9f9f9; color: #333; }
 h1 { font-size: 28px; margin-bottom: 1rem; text-align: center; color: #2c3e50; }
@@ -17,12 +17,11 @@ button:hover { background-color: #45a049; }
 table { border-collapse: collapse; width: 100%; max-width: 400px; margin-top: 1rem; margin-bottom: 1rem; }
 th, td { border: 1px solid #ccc; padding: 0.5rem; font-size: 22px; text-align: left; }
 th { background-color: #ecf0f1; }
-#tbl div { margin-bottom: 0.5rem; font-size: 22px; }
 </style>
 </head>
 <body>
 
-<h1>Fütterung dokumentieren v1.6</h1>
+<h1>Fütterung dokumentieren v1.7</h1>
 
 <label for="ration">Ration auswählen</label>
 <select id="ration"></select>
@@ -39,7 +38,10 @@ th { background-color: #ecf0f1; }
 <div class="timer" id="timer"></div>
 <div class="stat" id="stat"></div>
 
-<div id="tbl"></div>
+<table>
+<thead><tr><th>Komponente</th><th>kg</th></tr></thead>
+<tbody id="tbl"></tbody>
+</table>
 
 <script>
 const rationCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=0&single=true&output=csv";
@@ -79,6 +81,7 @@ async function init() {
   if(ration.options.length>0) ration.selectedIndex=0;
 
   ration.onchange = suggest;
+  // inputfelder nur zur berechnung, speichern bleibt manuell
   anz.oninput = fak.oninput = rechnen;
 
   await suggest();
@@ -109,8 +112,10 @@ function rechnen() {
   for(let c in R[r]){
     let tm = R[r][c];
     let ts = TS[c]||100;
-    let fm = (tm/(ts/100))*a*f;
-    tbl.innerHTML += `<div>${c}: ${Math.round(fm)}</div>`;
+    let fm = Math.round((tm/(ts/100))*a*f);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${c}</td><td>${fm}</td>`;
+    tbl.appendChild(tr);
   }
 }
 
@@ -125,7 +130,6 @@ async function speichern() {
   navigator.vibrate([200,100,200]);
   startTimer();
   statistik();
-  await suggest();
 }
 
 function startTimer() {
