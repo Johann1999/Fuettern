@@ -3,31 +3,35 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fütterung dokumentieren v1.5</title>
+<title>Fütterung dokumentieren v1.6</title>
 <style>
-body{font-family:Arial;margin:1rem;font-size:20px}
-h1{font-size:28px}
-input, select, button{font-size:22px;padding:.5rem;width:100%;max-width:150px}
-.alert{font-size:26px;color:green;opacity:0;transition:opacity .3s;margin-top:.5rem}
-.timer{font-size:34px;font-weight:bold;margin-top:1rem}
-.stat{font-size:24px;margin-top:1rem}
-#saveBtn{background-color:#4CAF50;color:white;border:none;cursor:pointer;margin-top:0.5rem}
-#saveBtn:hover{background-color:#45a049}
-table, td, th{border:1px solid #ccc;border-collapse:collapse;padding:.5rem;font-size:22px}
+body { font-family: Arial, sans-serif; margin: 1rem; font-size: 22px; background-color: #f9f9f9; color: #333; }
+h1 { font-size: 28px; margin-bottom: 1rem; text-align: center; color: #2c3e50; }
+label { font-weight: bold; margin-top: 1rem; display: block; }
+select, input { font-size: 22px; padding: 0.5rem; width: 100%; max-width: 300px; margin-bottom: 1rem; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+button { font-size: 24px; padding: 0.6rem; width: 100%; max-width: 300px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 1rem; }
+button:hover { background-color: #45a049; }
+.alert { font-size: 26px; color: green; opacity: 0; transition: opacity 0.3s; text-align: center; margin-bottom: 1rem; }
+.timer { font-size: 34px; font-weight: bold; text-align: center; margin-top: 1rem; }
+.stat { font-size: 24px; margin-top: 1rem; text-align: center; }
+table { border-collapse: collapse; width: 100%; max-width: 400px; margin-top: 1rem; margin-bottom: 1rem; }
+th, td { border: 1px solid #ccc; padding: 0.5rem; font-size: 22px; text-align: left; }
+th { background-color: #ecf0f1; }
+#tbl div { margin-bottom: 0.5rem; font-size: 22px; }
 </style>
 </head>
 <body>
 
-<h1>Fütterung dokumentieren v1.5</h1>
+<h1>Fütterung dokumentieren v1.6</h1>
 
-<label>Ration auswählen</label>
+<label for="ration">Ration auswählen</label>
 <select id="ration"></select>
 
-<label>Anzahl Tiere</label>
-<input id="anz" type="number">
+<label for="anz">Anzahl Tiere</label>
+<input id="anz" type="number" min="1">
 
-<label>Korrekturfaktor (%)</label>
-<input id="fak" type="number">
+<label for="fak">Korrekturfaktor (%)</label>
+<input id="fak" type="number" min="1">
 
 <button id="saveBtn" onclick="speichern()">Fütterung dokumentieren</button>
 
@@ -35,132 +39,124 @@ table, td, th{border:1px solid #ccc;border-collapse:collapse;padding:.5rem;font-
 <div class="timer" id="timer"></div>
 <div class="stat" id="stat"></div>
 
-<table>
-<thead><tr><th>Komponente</th><th>kg</th></tr></thead>
-<tbody id="tbl"></tbody>
-</table>
+<div id="tbl"></div>
 
 <script>
-const rationCSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=0&single=true&output=csv";
-const tsCSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=267748514&single=true&output=csv";
-const feedCSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=1853046882&single=true&output=csv";
-const formURL="https://docs.google.com/forms/d/e/1FAIpQLSe3xysbA5uxgEGDRy_lJAF2ZEDofJavgEXTlrz1POBcwMY3yw/formResponse";
-const ENTRY_R="entry.690290440";
-const ENTRY_A="entry.1406564399";
-const ENTRY_F="entry.373869795";
+const rationCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=0&single=true&output=csv";
+const tsCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=267748514&single=true&output=csv";
+const feedCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=1853046882&single=true&output=csv";
+const formURL = "https://docs.google.com/forms/d/e/1FAIpQLSe3xysbA5uxgEGDRy_lJAF2ZEDofJavgEXTlrz1POBcwMY3yw/formResponse";
+const ENTRY_R = "entry.690290440";
+const ENTRY_A = "entry.1406564399";
+const ENTRY_F = "entry.373869795";
 
-let R={},TS={},lastFaktor=null;
+let R = {}, TS = {}, lastFaktor = null;
+let ration = document.getElementById("ration"), anz = document.getElementById("anz"), fak = document.getElementById("fak"), tbl = document.getElementById("tbl"), msg = document.getElementById("msg"), timer = document.getElementById("timer"), stat = document.getElementById("stat");
 
-let ration=document.getElementById("ration"),anz=document.getElementById("anz"),fak=document.getElementById("fak"),tbl=document.getElementById("tbl"),msg=document.getElementById("msg"),timer=document.getElementById("timer"),stat=document.getElementById("stat");
+async function csv(url) { const t = await fetch(url); return (await t.text()).trim().split("\n").map(r=>r.split(",")); }
 
-async function csv(url){const t=await fetch(url);return(await t.text()).trim().split("\n").map(r=>r.split(","));}
+async function init() {
+  const r = await csv(rationCSV);
+  const h = r[0];
+  for (let i=1; i<r.length; i++) {
+    let name = r[i][0];
+    R[name] = {};
+    for (let j=1; j<h.length; j++) {
+      let v = parseFloat(r[i][j]);
+      if (v>0) R[name][h[j]] = v;
+    }
+  }
+  const t = await csv(tsCSV);
+  for (let i=1; i<t.length; i++) TS[t[i][1]] = parseFloat(t[i][2]);
 
-async function init(){
- const r=await csv(rationCSV);
- const h=r[0];
- for(let i=1;i<r.length;i++){
-   let name=r[i][0];
-   R[name]={};
-   for(let j=1;j<h.length;j++){
-     let v=parseFloat(r[i][j]);
-     if(v>0) R[name][h[j]]=v;
-   }
- }
- const t=await csv(tsCSV);
- for(let i=1;i<t.length;i++) TS[t[i][1]]=parseFloat(t[i][2]);
+  ration.innerHTML="";
+  Object.keys(R).forEach(k=>{
+    let o = document.createElement("option");
+    o.textContent = k;
+    o.value = k;
+    ration.appendChild(o);
+  });
+  if(ration.options.length>0) ration.selectedIndex=0;
 
- ration.innerHTML="";
- Object.keys(R).forEach(k=>{
-   let o=document.createElement("option");
-   o.textContent=k;
-   o.value=k;
-   ration.appendChild(o);
- });
- if(ration.options.length>0) ration.selectedIndex=0;
+  ration.onchange = suggest;
+  anz.oninput = fak.oninput = rechnen;
 
- ration.onchange=suggest;
- anz.oninput=fak.oninput=rechnen;
-
- await suggest();
- setInterval(statistik,5000);
+  await suggest();
+  setInterval(statistik,5000);
 }
 
-async function suggest(){
- const rows=await csv(feedCSV);
- let r=ration.value;
- lastFaktor=null;
- for(let i=rows.length-1;i>0;i--){
-   if(rows[i][1]===r){
-     lastFaktor=parseFloat(rows[i][3]);
-     break;
-   }
- }
- if(lastFaktor!==null){
-   if(!anz.value) anz.value=rows[rows.length-1][2];
-   if(!fak.value) fak.value=lastFaktor;
- }
- rechnen();
+async function suggest() {
+  const rows = await csv(feedCSV);
+  let r = ration.value;
+  lastFaktor = null;
+  for (let i=rows.length-1;i>0;i--){
+    if(rows[i][1]===r){
+      lastFaktor = parseFloat(rows[i][3]);
+      if(!anz.value) anz.value = rows[i][2];
+      if(!fak.value) fak.value = lastFaktor;
+      break;
+    }
+  }
+  rechnen();
 }
 
-function rechnen(){
- const r=ration.value;
- const a=parseFloat(anz.value);
- const f=parseFloat(fak.value)/100;
- tbl.innerHTML="";
- if(!a||!f) return;
- for(let c in R[r]){
-   let tm=R[r][c];
-   let ts=TS[c]||100;
-   let fm=(tm/(ts/100))*a*f;
-   const tr=document.createElement("tr");
-   tr.innerHTML=`<td>${c}</td><td>${fm.toFixed(2)}</td>`;
-   tbl.appendChild(tr);
- }
+function rechnen() {
+  const r = ration.value;
+  const a = parseFloat(anz.value);
+  const f = parseFloat(fak.value)/100;
+  tbl.innerHTML="";
+  if(!a||!f) return;
+  for(let c in R[r]){
+    let tm = R[r][c];
+    let ts = TS[c]||100;
+    let fm = (tm/(ts/100))*a*f;
+    tbl.innerHTML += `<div>${c}: ${Math.round(fm)}</div>`;
+  }
 }
 
-async function speichern(){
- let fd=new FormData();
- fd.append(ENTRY_R,ration.value);
- fd.append(ENTRY_A,anz.value);
- fd.append(ENTRY_F,fak.value);
- await fetch(formURL,{method:"POST",mode:"no-cors",body:fd});
- msg.style.opacity=1;
- setTimeout(()=>msg.style.opacity=0,1000);
- navigator.vibrate([200,100,200]);
- startTimer();
- statistik();
- await suggest();
+async function speichern() {
+  let fd = new FormData();
+  fd.append(ENTRY_R, ration.value);
+  fd.append(ENTRY_A, anz.value);
+  fd.append(ENTRY_F, fak.value);
+  await fetch(formURL, {method:"POST", mode:"no-cors", body:fd});
+  msg.style.opacity = 1;
+  setTimeout(()=>msg.style.opacity=0,1000);
+  navigator.vibrate([200,100,200]);
+  startTimer();
+  statistik();
+  await suggest();
 }
 
-function startTimer(){
- let t=240;
- timer.textContent="Mischzeit: 4:00";
- let i=setInterval(()=>{
-   t--;
-   let m=Math.floor(t/60);
-   let s=(t%60).toString().padStart(2,"0");
-   timer.textContent=`Mischzeit: ${m}:${s}`;
-   if(t<=0){clearInterval(i);navigator.vibrate([500,200,500]);timer.textContent="FERTIG";}
- },1000);
+function startTimer() {
+  let t=240;
+  timer.textContent="Mischzeit: 4:00";
+  let i=setInterval(()=>{
+    t--;
+    let m=Math.floor(t/60);
+    let s=(t%60).toString().padStart(2,"0");
+    timer.textContent = `Mischzeit: ${m}:${s}`;
+    if(t<=0){ clearInterval(i); navigator.vibrate([500,200,500]); timer.textContent="FERTIG"; }
+  },1000);
 }
 
-async function statistik(){
- const rows=await csv(feedCSV);
- let today=0,yest=0;
- let d=new Date();
- let t0=d.toISOString().slice(0,10);
- d.setDate(d.getDate()-1);
- let y0=d.toISOString().slice(0,10);
- for(let i=1;i<rows.length;i++){
-   let ts=rows[i][0];
-   if(!ts) continue;
-   if(ts.startsWith(t0)) today++;
-   if(ts.startsWith(y0)) yest++;
- }
- stat.innerHTML=`Heute: ${today} | Gestern: ${yest}`;
+async function statistik() {
+  const rows = await csv(feedCSV);
+  let today=0, yest=0;
+  let d = new Date();
+  let t0 = d.toISOString().slice(0,10);
+  d.setDate(d.getDate()-1);
+  let y0 = d.toISOString().slice(0,10);
+  for(let i=1;i<rows.length;i++){
+    let ts = rows[i][0];
+    if(!ts) continue;
+    if(ts.startsWith(t0)) today++;
+    if(ts.startsWith(y0)) yest++;
+  }
+  stat.innerHTML = `Heute: ${today} | Gestern: ${yest}`;
 }
 
-document.body.addEventListener("dblclick",speichern);
+document.body.addEventListener("dblclick", speichern);
 init();
 </script>
 </body>
