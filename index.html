@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fütterung dokumentieren v1.2</title>
+<title>Fütterung dokumentieren v1.3</title>
 
 <style>
 body{font-family:Arial;margin:1rem;font-size:20px}
@@ -16,15 +16,18 @@ th,td{border:1px solid #ccc;padding:.5rem}
 .stat{font-size:24px;margin-top:1rem}
 .red{color:red;font-weight:bold}
 .green{color:green;font-weight:bold}
+button#saveBtn{background-color:#4CAF50;color:white;border:none;cursor:pointer;margin-top:0.5rem}
+button#saveBtn:hover{background-color:#45a049}
 </style>
 </head>
 <body>
 
-<h1>Fütterung dokumentieren v1.2</h1>
+<h1>Fütterung dokumentieren v1.3</h1>
 
 <select id="ration"></select>
 <input id="anz" type="number" placeholder="Anzahl Tiere">
 <input id="fak" type="number" placeholder="Faktor %">
+<button id="saveBtn" onclick="speichern()">Fütterung dokumentieren</button>
 <div class="alert" id="msg">Dokumentiert</div>
 <div class="timer" id="timer"></div>
 <div class="stat" id="stat"></div>
@@ -38,7 +41,6 @@ th,td{border:1px solid #ccc;padding:.5rem}
 const rationCSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=0&single=true&output=csv";
 const tsCSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=267748514&single=true&output=csv";
 const feedCSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=1853046882&single=true&output=csv";
-
 const formURL="https://docs.google.com/forms/d/e/1FAIpQLSe3xysbA5uxgEGDRy_lJAF2ZEDofJavgEXTlrz1POBcwMY3yw/formResponse";
 const ENTRY_R="entry.690290440";
 const ENTRY_A="entry.1406564399";
@@ -105,8 +107,6 @@ async function speichern(){
  startTimer();
  statistik();
 }
-
-document.body.onkeydown=e=>{if(e.code=="Space") speichern();};
 
 function startTimer(){
  let t=240;
