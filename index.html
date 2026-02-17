@@ -56,4 +56,122 @@ const ENTRY_F="entry.373869795";
 
 let R={},TS={},ration=document.getElementById("ration"),anz=document.getElementById("anz"),fak=document.getElementById("fak"),tbl=document.getElementById("tbl"),msg=document.getElementById("msg"),timer=document.getElementById("timer"),stat=document.getElementById("stat"),lastAnz=document.getElementById("lastAnz"),lastFak=document.getElementById("lastFak"),todayDate=document.getElementById("todayDate"),lastDate=document.getElementById("lastDate");
 
-async function csv(url){const t=await fetch(url);return(await t.t
+async function csv(url){const t=await fetch(url);return(await t.text()).trim().split("\n").map(r=>r.split(","));}
+
+async function init(){
+ const d=new Date();
+ todayDate.textContent="Datum heute: "+d.toLocaleDateString();
+
+ const r=await csv(rationCSV);
+ const h=r[0];
+ for(let i=1;i<r.length;i++){
+   let name=r[i][0];
+   R[name]={};
+   for(let j=1;j<h.length;j++){
+     let v=parseFloat(r[i][j]);
+     if(v>0) R[name][h[j]]=v;
+   }
+ }
+ const t=await csv(tsCSV);
+ for(let i=1;i<t.length;i++) TS[t[i][1]]=parseFloat(t[i][2]);
+
+ // Dropdown füllen
+ ration.innerHTML="";
+ Object.keys(R).forEach(k=>{
+   let o=document.createElement("option");
+   o.textContent=k;
+   o.value=k;
+   ration.appendChild(o);
+ });
+ if(ration.options.length>0) ration.selectedIndex=0;
+
+ ration.onchange=suggest;
+ anz.oninput=fak.oninput=rechnen;
+ 
+ await suggest();
+ setInterval(statistik,5000);
+}
+
+async function suggest(){
+ // letzte Werte aus feedCSV
+ const rows=await csv(feedCSV);
+ let r=ration.value;
+ let last=null;
+ for(let i=rows.length-1;i>0;i--){
+   if(rows[i][1]===r){last=rows[i]; break;}
+ }
+ if(last){
+   lastAnz.textContent=last[2]+" Tiere";
+   lastFak.textContent=last[3];
+   lastDate.textContent="Letzte Fütterung: "+new Date(last[0]).toLocaleDateString();
+   if(!anz.value) anz.value=last[2];
+   if(!fak.value) fak.value=last[3];
+ }else{
+   lastAnz.textContent="-";
+   lastFak.textContent="-";
+   lastDate.textContent="Letzte Fütterung: -";
+ }
+ rechnen();
+}
+
+function rechnen(){
+ const r=ration.value;
+ const a=parseFloat(anz.value);
+ const f=parseFloat(fak.value)/100;
+ tbl.innerHTML="";
+ if(!a||!f)return;
+ for(let c in R[r]){
+   let tm=R[r][c];
+   let ts=TS[c]||100;
+   let fm=(tm/(ts/100))*a*f;
+   tbl.innerHTML+=`<tr><td>${c}</td><td>${fm.toFixed(1)}</td></tr>`;
+ }
+}
+
+async function speichern(){
+ let fd=new FormData();
+ fd.append(ENTRY_R,ration.value);
+ fd.append(ENTRY_A,anz.value);
+ fd.append(ENTRY_F,fak.value);
+ await fetch(formURL,{method:"POST",mode:"no-cors",body:fd});
+ msg.style.opacity=1;
+ setTimeout(()=>msg.style.opacity=0,1000);
+ navigator.vibrate([200,100,200]);
+ startTimer();
+ statistik();
+ await suggest();
+}
+
+function startTimer(){
+ let t=240;
+ timer.textContent="Mischzeit: 4:00";
+ let i=setInterval(()=>{
+   t--;
+   let m=Math.floor(t/60);
+   let s=(t%60).toString().padStart(2,"0");
+   timer.textContent=`Mischzeit: ${m}:${s}`;
+   if(t<=0){clearInterval(i);navigator.vibrate([500,200,500]);timer.textContent="FERTIG";}
+ },1000);
+}
+
+async function statistik(){
+ const rows=await csv(feedCSV);
+ let today=0,yest=0;
+ let d=new Date();
+ let t0=d.toISOString().slice(0,10);
+ d.setDate(d.getDate()-1);
+ let y0=d.toISOString().slice(0,10);
+ for(let i=1;i<rows.length;i++){
+   let ts=rows[i][0];
+   if(!ts) continue;
+   if(ts.startsWith(t0)) today++;
+   if(ts.startsWith(y0)) yest++;
+ }
+ stat.innerHTML=`Heute: <span class="${today==yest?'green':'red'}">${today}</span> | Gestern: ${yest}`;
+}
+
+document.body.addEventListener("dblclick",speichern);
+init();
+</script>
+</body>
+</html>
