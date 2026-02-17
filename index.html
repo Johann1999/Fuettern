@@ -3,239 +3,151 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fütterung erfassen</title>
+<title>Fütterung</title>
 <style>
-body{font-family:Arial, sans-serif;margin:1rem}
-label{display:block;margin-top:0.6rem}
-input,select,button{padding:0.45rem;margin-top:0.3rem;width:100%;max-width:260px}
-table{border-collapse:collapse;margin-top:1rem;width:100%}
-th,td{border:1px solid #ccc;padding:0.4rem;text-align:left}
-th{background:#f0f0f0}
-#timer{margin-top:1rem;font-size:1.2rem;font-weight:bold}
-#message{margin-top:0.5rem;color:green;font-weight:bold}
-#uebersicht{margin-top:1rem;font-weight:bold}
-.red{color:red;}
-@keyframes blink { 50% { background-color: yellow; } }
-.blink { animation: blink 1s step-start infinite; }
+body{font-family:Arial,sans-serif;margin:0;padding:1rem;font-size:20px}
+h1{font-size:28px;margin-bottom:.5rem}
+label{display:block;margin-top:.7rem}
+select,input,button{font-size:20px;padding:.6rem;margin-top:.3rem;width:100%;max-width:320px}
+button{cursor:pointer}
+#msg{position:fixed;top:10px;left:50%;transform:translateX(-50%);background:#4caf50;color:#fff;padding:.7rem 1.2rem;border-radius:10px;display:none}
+#timer{font-size:36px;font-weight:bold;margin-top:1rem}
+#stats{margin-top:1rem;padding:.7rem;border-radius:10px}
+.red{background:#ffdddd}
+.green{background:#ddffdd}
+#history{margin-top:1rem}
+table{border-collapse:collapse;width:100%;font-size:18px}
+th,td{border:1px solid #ccc;padding:.4rem;text-align:left}
+th{background:#eee}
 </style>
 </head>
 <body>
-
-<h1>Fütterung erfassen</h1>
-
-<label>Ration auswählen</label>
-<select id="rationSelect"></select>
-
+<h1>Fütterung dokumentieren</h1>
+<div id="msg"></div>
+<label>Ration</label>
+<select id="ration"></select>
 <label>Anzahl Tiere</label>
 <input type="number" id="anzahl">
-
-<label>Korrekturfaktor (%)</label>
-<input type="number" id="faktor">
-
-<button onclick="speichern()">Fütterung dokumentieren</button>
-
-<div id="message"></div>
+<label>Faktor</label>
+<input type="number" step="0.01" id="faktor">
+<button onclick="dokumentieren()">Dokumentieren</button>
 <div id="timer"></div>
-
-<div id="uebersicht">
-  <p>Rationen gestern: <span id="yesterdayCount">0</span></p>
-  <p>Rationen heute: <span id="todayCount">0</span></p>
-</div>
-
-<h2>Zu fütternde Frischmasse (kg)</h2>
+<div id="stats"></div>
+<div id="history">
+<h2>Letzte Dokumentationen</h2>
 <table>
-<thead><tr><th>Komponente</th><th>kg</th></tr></thead>
-<tbody id="resultTable"></tbody>
+<thead><tr><th>Zeit</th><th>Ration</th><th>Anzahl</th><th>Faktor</th></tr></thead>
+<tbody id="histBody"></tbody>
 </table>
-
-<form id="fuetterForm" method="POST" action="https://docs.google.com/forms/d/e/1FAIpQLSe3xysbA5uxgEGDRy_lJAF2ZEDofJavgEXTlrz1POBcwMY3yw/formResponse" target="hidden_iframe">
-  <input type="hidden" name="entry.690290440" id="formRation">
-  <input type="hidden" name="entry.1406564399" id="formAnzahl">
-  <input type="hidden" name="entry.373869795" id="formFaktor">
-</form>
-<iframe name="hidden_iframe" style="display:none;"></iframe>
-
+</div>
 <script>
 // CSV Links
-const rationCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=0&single=true&output=csv";
-const tsCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=267748514&single=true&output=csv";
-const fuetterCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=1853046882&single=true&output=csv";
+const rationCSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=0&single=true&output=csv";
+const fuetterCSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3X2pqe0ycs2bDCTIgJA-KyXbzR80hCPK0TPgM7C6fyUh_xflB_Ry2PVu2BD_lbzBSgv2YVrxFec-v/pub?gid=1853046882&single=true&output=csv";
 
-let rationen = {}, tsWerte = {}, letzte = {};
-let timerInterval = null;
+// FORM URL + ENTRY IDs HIER EINTRAGEN
+const formURL="https://docs.google.com/forms/d/e/1FAIpQLSe3xysbA5uxgEGDRy_lJAF2ZEDofJavgEXTlrz1POBcwMY3yw/formResponse";
+// Timestamp wird automatisch von Google Forms gesetzt — kein Entry nötig
+const eRation="entry.690290440";
+const eAnzahl="entry.1406564399";
+const eFaktor="en
 
-// --- CSV Laden ---
-async function loadCSV(url){
-  const resp = await fetch(url);
-  return await resp.text();
+// LIVE SYNC via localStorage
+window.addEventListener("storage",()=>loadLastInputs());
+function saveInputs(){
+ localStorage.setItem("ration",ration.value);
+ localStorage.setItem("anzahl",anzahl.value);
+ localStorage.setItem("faktor",faktor.value);
+}
+function loadLastInputs(){
+ ration.value=localStorage.getItem("ration")||"";
+ anzahl.value=localStorage.getItem("anzahl")||"";
+ faktor.value=localStorage.getItem("faktor")||"";
 }
 
-function parseCSV(text){
-  return text.trim().split("\n").map(r=>r.split(",").map(c=>c.trim()));
+ration.onchange=anzahl.oninput=faktor.oninput=saveInputs;
+
+async function loadRationen(){
+ const t=await (await fetch(rationCSV)).text();
+ const rows=t.trim().split("\n");
+ ration.innerHTML="";
+ rows.slice(1).forEach(r=>{
+  const name=r.split(",")[0];
+  if(name){const o=document.createElement("option");o.value=name;o.textContent=name;ration.appendChild(o)}
+ });
+ loadLastInputs();
 }
 
-// --- Init ---
-async function init(){
-  // Rationen
-  const rText = await loadCSV(rationCSV);
-  const rRows = parseCSV(rText);
-  const headers = rRows[0].map(h=>h.trim());
-  for(let i=1;i<rRows.length;i++){
-    const name = rRows[i][0].trim();
-    if(!name) continue;
-    rationen[name]={};
-    for(let j=1;j<headers.length;j++){
-      const val = parseFloat(rRows[i][j]);
-      if(!isNaN(val) && val>0) rationen[name][headers[j]]=val;
-    }
-  }
-
-  // TS-Werte
-  const tText = await loadCSV(tsCSV);
-  const tRows = parseCSV(tText);
-  for(let i=1;i<tRows.length;i++){
-    const comp = tRows[i][1].trim();
-    const ts = parseFloat(tRows[i][2]);
-    if(!isNaN(ts)) tsWerte[comp]=ts;
-  }
-
-  // Letzte Werte + Übersicht
-  await updateUebersicht();
-
-  populateSelect();
+let allDocs=[];
+async function loadDocs(){
+ const t=await (await fetch(fuetterCSV)).text();
+ const rows=t.trim().split("\n");
+ allDocs=rows.slice(1).map(r=>{
+  const c=r.split(",");
+  return{zeit:new Date(c[0]),ration:c[1],anz:c[2],f:c[3]}
+ });
+ renderHistory();
+ calcStats();
 }
 
-// --- Dropdown ---
-function populateSelect(){
-  const sel = document.getElementById("rationSelect");
-  sel.innerHTML="";
-  Object.keys(rationen).sort().forEach(r=>{
-    const opt=document.createElement("option");
-    opt.value=r;
-    opt.textContent=r;
-    sel.appendChild(opt);
-  });
-  sel.selectedIndex=0;
-  sel.addEventListener("change", suggest);
-  suggest();
+function renderHistory(){
+ const tb=document.getElementById("histBody");
+ tb.innerHTML="";
+ allDocs.slice(-10).reverse().forEach(d=>{
+  const tr=document.createElement("tr");
+  tr.innerHTML=`<td>${d.zeit.toLocaleString()}</td><td>${d.ration}</td><td>${d.anz}</td><td>${d.f}</td>`;
+  tb.appendChild(tr);
+ });
 }
 
-// --- Vorschläge ---
-function suggest(){
-  const r=document.getElementById("rationSelect").value.trim();
-  if(letzte[r]){
-    document.getElementById("anzahl").value = letzte[r].anz;
-    document.getElementById("faktor").value = letzte[r].fak;
-  } else {
-    document.getElementById("anzahl").value = '';
-    document.getElementById("faktor").value = '';
-  }
-  berechnen();
+function calcStats(){
+ const today=new Date();
+ const y=new Date();y.setDate(today.getDate()-1);
+ let cT=0,cY=0;
+ allDocs.forEach(d=>{
+  if(d.zeit.toDateString()===today.toDateString())cT++;
+  if(d.zeit.toDateString()===y.toDateString())cY++;
+ });
+ const box=document.getElementById("stats");
+ box.className=(cT===cY)?"green":"red";
+ box.textContent=`Gestern: ${cY} | Heute: ${cT}`;
 }
 
-// --- Berechnen ---
-function berechnen(){
-  const r=document.getElementById("rationSelect").value;
-  const anz=parseFloat(document.getElementById("anzahl").value);
-  const fak=parseFloat(document.getElementById("faktor").value)/100;
-  if(!r||isNaN(anz)||isNaN(fak)) return;
-  const tbody=document.getElementById("resultTable");
-  tbody.innerHTML="";
-  for(let comp in rationen[r]){
-    const tm=rationen[r][comp];
-    const ts=tsWerte[comp]||100;
-    const fm=(tm/(ts/100))*anz*fak;
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${comp}</td><td>${fm.toFixed(2)}</td>`;
-    tbody.appendChild(tr);
-  }
+function msg(text){
+ const m=document.getElementById("msg");
+ m.textContent=text;
+ m.style.display="block";
+ setTimeout(()=>m.style.display="none",1000);
 }
 
-document.getElementById("anzahl").addEventListener("input", berechnen);
-document.getElementById("faktor").addEventListener("input", berechnen);
+function vibrate(){if(navigator.vibrate)navigator.vibrate([200,100,200])}
 
-// --- Timer ---
-function startTimer(seconds=240){
-  clearInterval(timerInterval);
-  const timerDiv=document.getElementById("timer");
-  let remaining=seconds;
-  timerDiv.textContent=`Mischzeit: ${Math.floor(remaining/60)}:${(remaining%60).toString().padStart(2,'0')}`;
-  timerInterval=setInterval(()=>{
-    remaining--;
-    if(remaining<=0){
-      clearInterval(timerInterval);
-      timerDiv.textContent="Mischzeit beendet!";
-      // Alarm: Hintergrund blinkt + Vibration
-      timerDiv.classList.add("blink");
-      if(navigator.vibrate){
-        navigator.vibrate([500,200,500]);
-      }
-      return;
-    }
-    timerDiv.textContent=`Mischzeit: ${Math.floor(remaining/60)}:${(remaining%60).toString().padStart(2,'0')}`;
-  },1000);
+function startTimer(){
+ let s=240;
+ const t=document.getElementById("timer");
+ const i=setInterval(()=>{
+  s--;
+  t.textContent="Mischzeit: "+Math.floor(s/60)+":"+String(s%60).padStart(2,'0');
+  if(s<=0){clearInterval(i);vibrate();msg("Mischzeit fertig")}
+ },1000);
 }
 
-// --- Übersicht aktualisieren ---
-async function updateUebersicht(){
-  const fText=await loadCSV(fuetterCSV);
-  const fRows=parseCSV(fText);
-  const today=new Date().toISOString().slice(0,10);
-  const yesterday=new Date(Date.now()-86400000).toISOString().slice(0,10);
-  let todayCount=0, yesterdayCount=0;
-  letzte={};
-  for(let i=1;i<fRows.length;i++){
-    const ration=fRows[i][1].trim();
-    const date=fRows[i][0].trim().slice(0,10);
-    const anz=parseFloat(fRows[i][2]);
-    const fak=parseFloat(fRows[i][3]);
-    if(ration && !isNaN(anz) && !isNaN(fak)){
-      letzte[ration]={anz,fak};
-      if(date===today) todayCount++;
-      if(date===yesterday) yesterdayCount++;
-    }
-  }
-  document.getElementById("todayCount").textContent=todayCount;
-  document.getElementById("yesterdayCount").textContent=yesterdayCount;
-  const ueb=document.getElementById("uebersicht");
-  if(todayCount!==yesterdayCount){
-    ueb.classList.add("red");
-  } else { ueb.classList.remove("red"); }
+function dokumentieren(){
+ const fd=new FormData();
+ fd.append(eDatum,new Date().toISOString());
+ fd.append(eRation,ration.value);
+ fd.append(eAnzahl,anzahl.value);
+ fd.append(eFaktor,faktor.value);
+ fetch(formURL,{method:"POST",mode:"no-cors",body:fd});
+ msg("Dokumentiert");
+ vibrate();
+ startTimer();
+ setTimeout(loadDocs,1500);
 }
 
-// --- Speichern ---
-function speichern(){
-  const r=document.getElementById("rationSelect").value;
-  const anz=document.getElementById("anzahl").value;
-  const fak=document.getElementById("faktor").value;
-  if(!r||!anz||!fak){alert("Eingaben prüfen"); return;}
-  document.getElementById("formRation").value=r;
-  document.getElementById("formAnzahl").value=anz;
-  document.getElementById("formFaktor").value=fak;
-  document.getElementById("fuetterForm").submit();
-
-  // Meldung automatisch nach 1 Sekunde ausblenden
-  const msgDiv=document.getElementById("message");
-  msgDiv.textContent="Dokumentiert!";
-  setTimeout(()=>{msgDiv.textContent="";},1000);
-
-  // Timer starten
-  startTimer(240);
-
-  // Übersicht aktualisieren
-  updateUebersicht();
-}
-
-// --- Lauter-Taste Shortcut ---
-window.addEventListener('keydown',function(e){
-  if(e.key==="AudioVolumeUp"||e.keyCode===175){
-    e.preventDefault();
-    speichern();
-  }
-});
-
-init();
+loadRationen();
+loadDocs();
+setInterval(loadDocs,15000);
 </script>
-
 </body>
 </html>
